@@ -1,6 +1,6 @@
 {
   "name": "puppetool",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "This is a puppeteer pool helper to handle concurrent tab/page with limit.",
   "main": "dist/puppetool.js",
   "module": "dist/puppetool.mjs",

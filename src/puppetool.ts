@@ -20,7 +20,15 @@ export default class Puppetool {
     connection: BrowserConnectResult | undefined;
     pages: PageWrapper[] = [];
 
-    async getPage(props?: { turnstile?: boolean, fresh?: boolean }): Promise<PageWithCursor | undefined> {
+    async closeById(id: string) {
+        const index = this.pages.findIndex(e => e.id === id);
+        if (index !== -1) {
+            await this.pages[index].page?.close().catch(() => { });
+            this.pages.splice(index, 1);
+        }
+    }
+
+    async getPage(props?: { turnstile?: boolean, fresh?: boolean, id?: string }): Promise<PageWithCursor | undefined> {
         if (!this.connection) this.connection = await new BrowserHelper().connect(this.options);
         if (this.pages.length >= this.maxConcurrentPages) await this.waitForFreeSlot();
         let page: Page | undefined;
@@ -37,11 +45,13 @@ export default class Puppetool {
         }
         if (!page) return undefined;
         const pagewithcursor = await CursorPage.create({ ...this.connection, page, turnstile: props?.turnstile });
-        const wrapped = new PageWrapper(pagewithcursor);
-        pagewithcursor.on("close", () => {
-            const __wrap = this.pages.find(e => e.__id === wrapped.__id);
-            if (__wrap) __wrap.page = undefined;
-            this.pages = this.pages.filter(p => p.__id !== wrapped.__id);
+        const wrapped = new PageWrapper(pagewithcursor, props?.id);
+        pagewithcursor.on("close", async () => {
+            const index = this.pages.findIndex(e => e.id === wrapped.id);
+            if (index !== -1) {
+                await this.pages[index].page?.close().catch(() => { });
+                this.pages.splice(index, 1);
+            }
         });
         this.pages.push(wrapped);
         return pagewithcursor;
